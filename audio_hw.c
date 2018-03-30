@@ -159,6 +159,7 @@ enum {
     ORIENTATION_UNDEFINED,
 };
 
+static short UNSET_BUFFER[1024] = {0};
 static uint32_t out_get_sample_rate(const struct audio_stream *stream);
 static size_t out_get_buffer_size(const struct audio_stream *stream);
 static audio_format_t out_get_format(const struct audio_stream *stream);
@@ -509,7 +510,8 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
 
     buffer->frame_count = (buffer->frame_count > in->frames_in) ?
                                 in->frames_in : buffer->frame_count;
-    buffer->i16 = in->buffer + (in->pcm_config->period_size - in->frames_in);
+    buffer->i16 = property_get_bool("audio.use_fake", 0) ? UNSET_BUFFER :
+                  in->buffer + (in->pcm_config->period_size - in->frames_in);
 
     return in->read_status;
 
