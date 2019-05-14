@@ -249,14 +249,7 @@ struct pcm *my_pcm_open(unsigned int device, unsigned int flags, struct pcm_conf
         ALOGE("unable to find a sound card");
         return NULL;
     }
-    struct pcm *pcm = NULL;
-    char value[PROPERTY_VALUE_MAX];
-    property_get("audio.use_fake", value, NULL);
-    if (strcmp(value, "vir_audio") == 0) {
-        pcm = pcm_open(1, 0, flags, config);
-    } else {
-        pcm = pcm_open(info->card, info->device, flags, config);
-    }
+    struct pcm *pcm = pcm_open(info->card, info->device, flags, config);
     if (pcm && !pcm_is_ready(pcm)) {
         ALOGE("my_pcm_open(%d) failed: %s", flags, pcm_get_error(pcm));
         pcm_close(pcm);
