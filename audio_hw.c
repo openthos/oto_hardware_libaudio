@@ -42,6 +42,7 @@
 
 #include "audio_route.h"
 
+#define AUDIO_USE_FAKE "persist.audio.use_fake"
 #define PCM_CARD 0
 #define PCM_DEVICE 0
 #define PCM_DEVICE_SCO 2
@@ -244,12 +245,44 @@ struct snd_pcm_info *select_card(unsigned int device, unsigned int flags)
 
 struct pcm *my_pcm_open(unsigned int device, unsigned int flags, struct pcm_config *config)
 {
+    char audio_node[] = "/proc/asound/card0";
+    char buff[24], data[2] = "";
+    char value[PROPERTY_VALUE_MAX];
+    FILE *file = NULL;
+    struct pcm *pcm = NULL;
+
     struct snd_pcm_info *info = select_card(device, flags);
     if (!info) {
         ALOGE("unable to find a sound card");
         return NULL;
     }
-    struct pcm *pcm = pcm_open(info->card, info->device, flags, config);
+    if (property_get(AUDIO_USE_FAKE, value, "")) {
+        if (strcmp(value, "vir_audio") == 0) {
+            while (audio_node[17] < '9') {
+                data[0] = audio_node[17];
+                char audio[24] = "/proc/asound/card";
+                strcat(strcat(audio, data), "/id");
+                if ((file = fopen(audio, "r")) == NULL) {
+                    ALOGE("ERROR opening %s: %s", audio, strerror(errno));
+                    continue;
+                }
+                while (fgets(buff, sizeof(buff), file) != NULL) {
+                    if (strstr(buff, "Dummy") != NULL) {
+                        fclose(file);
+                        goto stop;
+                    }
+                }
+                audio_node[17]++;
+                fclose(file);
+            }
+            stop:
+            if (audio_node[17] != '9') {
+                pcm = pcm_open(audio_node[17] - '0', 0, flags, config);
+            }
+        } else if (strcmp(value, "phy_audio") == 0) {
+            pcm = pcm_open(info->card, info->device, flags, config);
+        }
+    }
     if (pcm && !pcm_is_ready(pcm)) {
         ALOGE("my_pcm_open(%d) failed: %s", flags, pcm_get_error(pcm));
         pcm_close(pcm);
