@@ -279,9 +279,10 @@ struct pcm *my_pcm_open(unsigned int device, unsigned int flags, struct pcm_conf
             if (audio_node[17] != '9') {
                 pcm = pcm_open(audio_node[17] - '0', 0, flags, config);
             }
-        } else if (strcmp(value, "phy_audio") == 0) {
-            pcm = pcm_open(info->card, info->device, flags, config);
         }
+    }
+    if (!pcm) {
+        pcm = pcm_open(info->card, info->device, flags, config);
     }
     if (pcm && !pcm_is_ready(pcm)) {
         ALOGE("my_pcm_open(%d) failed: %s", flags, pcm_get_error(pcm));
